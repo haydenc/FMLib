@@ -3,8 +3,8 @@ import requests
 from result_set import FileMakerResultSet
 from lxml import etree
 
-class FileMakerObjectManager(object):
 
+class FileMakerObjectManager(object):
     def __init__(self, schema=None, host=None, port=None, user=None, password=None, db=None, layout=None):
         self.schema = schema or settings.schema
         self.host = host or settings.host
@@ -16,25 +16,36 @@ class FileMakerObjectManager(object):
 
     @classmethod
     def create_from_config(cls):
+        # TODO: Implement
         pass
 
+    def list_db_names(self):
+        return self._perform_request('dbnames')
+
+    def list_layout_names(self):
+        return self._perform_request('layoutnames')
+
+    def view(self):
+        return self._perform_request('view')
+
     def get(self, **kwargs):
-        action = 'find'
-        results = self._perform_request(action, kwargs)
+        results = self._perform_request('find', kwargs)
         if len(results) > 1:
             raise Exception('Get method returned more than one result')
         if len(results) == 0:
             raise Exception('Get method returned no result')
         return results[0]
 
-    def all(self, order_by={}):
+    def all(self, order_by=None):
+        order_by = order_by or {}
         return self.filter(order_by=order_by)
 
-    def filter(self, order_by={}, **kwargs):
-        action = 'findall'
-        return self._perform_request(action, kwargs, order_by=order_by)
+    def filter(self, order_by=None, **kwargs):
+        order_by = order_by or {}
+        return self._perform_request('findall', kwargs, order_by=order_by)
 
-    def _flatten(self, string_data):
+    @staticmethod
+    def _flatten(string_data):
         flattened_dict = {}
         for (key, value) in string_data.items():
             if isinstance(value, list):
@@ -47,7 +58,7 @@ class FileMakerObjectManager(object):
         save_kwargs = self._flatten(record._string_data)
         if record.record_id:
             action = 'edit'
-            save_kwargs.update({'-recid' : record.record_id})
+            save_kwargs.update({'-recid': record.record_id})
         else:
             action = 'new'
         return self._perform_request(action, save_kwargs)
@@ -59,9 +70,11 @@ class FileMakerObjectManager(object):
             record_id = record
         else:
             record_id = record.record_id
-        self._perform_request(action, {'-recid' : record_id})
+        self._perform_request(action, {'-recid': record_id})
 
-    def _perform_request(self, action, parameters, order_by={}):
+    def _perform_request(self, action, parameters=None, order_by=None):
+        order_by = order_by or {}
+        parameters = parameters or {}
         # TODO: Construct order by params
         url = self._get_request_address(action)
         response = requests.get(url, params=parameters)
@@ -72,7 +85,8 @@ class FileMakerObjectManager(object):
         return results
 
     def _get_request_address(self, action):
-        return '%s/fmi/xml/fmresultset.xml?-db=%s&-lay=%s&-%s' % (self._get_connection_string(), self.db, self.layout, action)
+        return '%s/fmi/xml/fmresultset.xml?-db=%s&-lay=%s&-%s' % (
+            self._get_connection_string(), self.db, self.layout, action)
 
     def _get_connection_string(self):
         return '%s://%s:%s@%s:%s' % (self.schema, self.user, self.password, self.host, self.port)

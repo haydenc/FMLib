@@ -1,7 +1,9 @@
+from exceptions import FMActionException
 import settings
 from metadata import FileMakerMetadata
 from record import FileMakerRecord
-from errors import FMErrorLookup
+from error_codes import FMErrorLookup
+
 
 class FileMakerResultSet(object):
 
@@ -10,20 +12,21 @@ class FileMakerResultSet(object):
         self.check_errors()
         self.parse_metadata()
         self.position = 0
-        self.results = self.tag.find(settings._RESULT_SET_TAG).findall(settings._RECORD_TAG)
+        self.results = self.tag.find(settings.RESULT_SET_TAG).findall(settings.RECORD_TAG)
         self.manager = manager
+        self.metadata = None
 
     def check_errors(self):
-        error_tag = self.tag.find(settings._ERROR_TAG)
+        error_tag = self.tag.find(settings.ERROR_TAG)
         error_dict = dict(error_tag.items())
         error_code = int(error_dict['code'])
         if error_code != 0:
             # TODO: Custom exception type including type
-            raise Exception(FMErrorLookup[error_code])
+            raise FMActionException(FMErrorLookup[error_code])
 
     def parse_metadata(self):
-        metadata_tag = self.tag.find(settings._METADATA_TAG)
-        datasource_tag = self.tag.find(settings._DATASOURCE_TAG)
+        metadata_tag = self.tag.find(settings.METADATA_TAG)
+        datasource_tag = self.tag.find(settings.DATASOURCE_TAG)
         self.metadata = FileMakerMetadata(metadata_tag, datasource_tag)
 
     def parse_record(self, record_node):
@@ -45,7 +48,7 @@ class FileMakerResultSet(object):
     def next(self):
         try:
             # TODO: Refactor this, could accidentally catch index error within FileMakerRecord or subclass parse_record
-            # TODO: Introduce resultset caching - we don't want to re-read the XML every time.
+            # TODO: Introduce result-set caching - we don't want to re-read the XML every time.
             record = self.parse_record(self.results[self.position])
             self.position += 1
             return record

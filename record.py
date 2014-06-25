@@ -2,14 +2,15 @@ import settings
 from lxml import etree
 import six
 
+
 class FileMakerRecord(object):
     _xml_string, _xml_node, _string_data, _data, record_id = (None,) * 5
-    def __init__(self, xml_string=None, xml_node=None, string_data=None, data=None, manager=None, record_id=None, mod_id=None):
+
+    def __init__(self, xml_string=None, xml_node=None, string_data=None, data=None, manager=None):
         # TODO: Raise an exception if zero or more than one of the constructor kwargs has been provided
         # TODO: This init method is messy
         # Keep a reference to the manager in case we decide to update this record
         self.manager = manager
-        record_node = None
         if xml_string:
             xml_node = etree.XML(xml_string)
         if xml_node is not None:
@@ -29,7 +30,7 @@ class FileMakerRecord(object):
     def update_value(self, key, value=None):
         """ Method to update the data for this record """
         if isinstance(key, six.string_types):
-            values_dict = { key : value }
+            values_dict = {key: value}
         else:
             values_dict = key
         self._data.update(values_dict)
@@ -39,7 +40,7 @@ class FileMakerRecord(object):
         # TODO: Consider abstracting these two functions to match each other
         """ Method to update the data for this record with the provided string values """
         if isinstance(key, six.string_types):
-            values_dict = { key : value }
+            values_dict = {key: value}
         else:
             values_dict = key
         self._string_data.update(values_dict)
@@ -57,24 +58,27 @@ class FileMakerRecord(object):
         if hasattr(self, 'manager'):
             return self.manager
         else:
+            from manager import FileMakerObjectManager
             # Will throw an error if the global config does not provide everything we need
             return FileMakerObjectManager.create_from_config()
 
     def _process_tag(self):
         _string_data = self._extract_set_data(self._tag)
-        related_set_tags = self._tag.findall(settings._RELATED_SET_TAG)
+        related_set_tags = self._tag.findall(settings.RELATED_SET_TAG)
         for related_set_tag in related_set_tags:
             related_set_name = dict(related_set_tag.items())['table']
-            _string_data[related_set_name] = [self._extract_set_data(record) for record in related_set_tag.findall(settings._RECORD_TAG)]
+            _string_data[related_set_name] = [self._extract_set_data(record) for record in
+                                              related_set_tag.findall(settings.RECORD_TAG)]
         return _string_data
 
-    def _extract_set_data(self, set_tag):
+    @staticmethod
+    def _extract_set_data(set_tag):
         _string_data = {}
-        field_tags = set_tag.findall(settings._FIELD_TAG)
+        field_tags = set_tag.findall(settings.FIELD_TAG)
         for f_tag in field_tags:
             items_dict = dict(f_tag.items())
             field_name = items_dict['name']
-            field_value = f_tag.find(settings._DATA_TAG).text
+            field_value = f_tag.find(settings.DATA_TAG).text
             _string_data[field_name] = field_value
         return _string_data
 

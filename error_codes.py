@@ -123,7 +123,8 @@ FMErrorLookup[725] = 'You do not have permission to modify records in the target
 FMErrorLookup[726] = 'There are more records in the import file than in the target table. Not all records were imported'
 FMErrorLookup[727] = 'There are more records in the target table than in the import file. Not all records were updated'
 FMErrorLookup[729] = 'Errors occurred during import. Records could not be imported'
-FMErrorLookup[730] = 'Unsupported Excel version. (Convert file to Excel 7.0 (Excel 95), Excel 97, 2000, or XP format and try again)'
+FMErrorLookup[730] = 'Unsupported Excel version.' + \
+                     '(Convert file to Excel 7.0 (Excel 95), Excel 97, 2000, or XP format and try again)'
 FMErrorLookup[731] = 'The file you are importing from contains no data'
 FMErrorLookup[732] = 'This file cannot be inserted because it contains other files'
 FMErrorLookup[733] = 'A table cannot be imported into itself'
