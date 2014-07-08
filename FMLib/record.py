@@ -20,12 +20,19 @@ class FileMakerRecord(object):
             self.record_id = self._tag_dict['record-id']
             self.mod_id = self._tag_dict['mod-id']
             string_data = self._process_tag()
+
         if string_data:
             self._string_data = string_data
             self._parse_values()
-        if data:
-            self.data = data
+        elif data:
+            self._data = data
             self._serialize_values()
+
+    def get_string_data(self):
+        return self._string_data
+
+    def get_data(self):
+        return self._data
 
     def update_value(self, key, value=None):
         """ Method to update the data for this record """
@@ -55,12 +62,11 @@ class FileMakerRecord(object):
         manager.save(self)
 
     def _get_manager(self):
-        if hasattr(self, 'manager'):
+        if self.manager:
             return self.manager
         else:
             from manager import FileMakerObjectManager
-            # Will throw an error if the global config does not provide everything we need
-            return FileMakerObjectManager.create_from_config()
+            return FileMakerObjectManager()
 
     def _process_tag(self):
         _string_data = self._extract_set_data(self._tag)

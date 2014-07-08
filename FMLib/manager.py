@@ -1,3 +1,4 @@
+from FMLib.exceptions import ZeroObjectsReturned, MultipleObjectsReturned
 import settings
 import requests
 from result_set import FileMakerResultSet
@@ -6,23 +7,62 @@ from lxml import etree
 
 class FileMakerObjectManager(object):
     def __init__(self, schema=None, host=None, port=None, user=None, password=None, db=None, layout=None):
-        self.schema = schema or settings.schema
-        self.host = host or settings.host
-        self.port = port or settings.port
-        self.user = user or settings.user
-        self.password = password or settings.password
-        self.db = db or settings.db
-        self.layout = layout or settings.layout
+        self._schema = schema or settings.schema
+        self._host = host or settings.host
+        self._port = port or settings.port
+        self._user = user or settings.user
+        self._password = password or settings.password
+        self._db = db or settings.db
+        self._layout = layout or settings.layout
 
-    @classmethod
-    def create_from_config(cls):
-        # TODO: Implement
-        pass
+    def get_schema(self):
+        """ Returns the schema - (http/https) """
+        return self._schema
+
+    def get_host(self):
+        """ Returns the host address """
+        return self._host
+
+    def get_port(self):
+        """ Returns the host port """
+        return self._port
+
+    def get_user(self):
+        """ Returns the username to be used for http authentication """
+        return self._user
+
+    def get_password(self):
+        """ Returns the username to be used for http authentication """
+        return self._password
+
+    def get_db(self):
+        """ Returns the username to be used for http authentication """
+        return self._db
+
+    def get_layout(self):
+        """ Returns the username to be used for http authentication """
+        return self._layout
+
+    def _get_connection_string(self):
+        """ Returns a basic connection string - schema, host, port and http basic auth credentials"""
+        return '%s://%s:%s@%s:%s' % \
+               (self.get_schema(), self.get_user(), self.get_password(), self.get_host(), self.get_port())
+
+    def _get_request_address(self, action):
+        """ Returns a fully prepared URI, including the action parameter """
+        return '%s/fmi/xml/fmresultset.xml?-db=%s&-lay=%s&-%s' % (
+            self._get_connection_string(), self.get_db(), self.get_layout(), action)
+
+    #####################
+    # # Begin Actions # #
+    #####################
 
     def list_db_names(self):
+        """ Returns a list of database names """
         return self._perform_request('dbnames')
 
     def list_layout_names(self):
+        """ Returns a list of layout names """
         return self._perform_request('layoutnames')
 
     def view(self):
@@ -31,9 +71,9 @@ class FileMakerObjectManager(object):
     def get(self, **kwargs):
         results = self._perform_request('find', kwargs)
         if len(results) > 1:
-            raise Exception('Get method returned more than one result')
+            raise MultipleObjectsReturned('Get method returned more than one result')
         if len(results) == 0:
-            raise Exception('Get method returned no result')
+            raise ZeroObjectsReturned('Get method returned no result')
         return results[0]
 
     def all(self, order_by=None):
@@ -55,7 +95,7 @@ class FileMakerObjectManager(object):
         return flattened_dict
 
     def save(self, record):
-        save_kwargs = self._flatten(record._string_data)
+        save_kwargs = self._flatten(record.get_string_data())
         if record.record_id:
             action = 'edit'
             save_kwargs.update({'-recid': record.record_id})
@@ -84,15 +124,8 @@ class FileMakerObjectManager(object):
             self.metadata = results.metadata
         return results
 
-    def _get_request_address(self, action):
-        return '%s/fmi/xml/fmresultset.xml?-db=%s&-lay=%s&-%s' % (
-            self._get_connection_string(), self.db, self.layout, action)
-
-    def _get_connection_string(self):
-        return '%s://%s:%s@%s:%s' % (self.schema, self.user, self.password, self.host, self.port)
-
     def _get_metadata(self):
-        if getattr(self, 'metadata'):
+        if hasattr(self, 'metadata'):
             return self.metadata
         else:
             view_results = self.view()

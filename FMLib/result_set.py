@@ -1,4 +1,4 @@
-from exceptions import FMActionException
+from exceptions import FMActionException, ZeroObjectsReturned
 import settings
 from metadata import FileMakerMetadata
 from record import FileMakerRecord
@@ -6,6 +6,7 @@ from error_codes import FMErrorLookup
 
 
 class FileMakerResultSet(object):
+    metadata = None
 
     def __init__(self, root_node, manager=None):
         self.tag = root_node
@@ -14,14 +15,14 @@ class FileMakerResultSet(object):
         self.position = 0
         self.results = self.tag.find(settings.RESULT_SET_TAG).findall(settings.RECORD_TAG)
         self.manager = manager
-        self.metadata = None
 
     def check_errors(self):
         error_tag = self.tag.find(settings.ERROR_TAG)
         error_dict = dict(error_tag.items())
         error_code = int(error_dict['code'])
         if error_code != 0:
-            # TODO: Custom exception type including type
+            if error_code == 401:
+                raise ZeroObjectsReturned(FMErrorLookup[error_code])
             raise FMActionException(FMErrorLookup[error_code])
 
     def parse_metadata(self):

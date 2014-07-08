@@ -3,22 +3,22 @@ import six
 
 from .. import manager, settings, exceptions
 import datetime
-from exceptions import FMActionException
-from record import FileMakerRecord
 
 from numpy.random.mtrand import RandomState
 import binascii
+from FMLib.record import FileMakerRecord
+
 rand = RandomState()
 
 NEW_PROJECT_DATA = {
     'Creation TimeStamp': None,
-    'Tasks': None,
+    #'Tasks': None,
     'Status on Screen': None,
     'Description': None,
     'Due Date': None,
     'Project Name': None,
     'Days Elapsed': None,
-    'Projects Browser': None,
+    'Projects Browser::Due Date': None,
     'Tag': None,
     'Project Completion Progress Bar': None,
     'Created By': None,
@@ -32,8 +32,8 @@ class BaseManagerTest(TestCase):
     def setUp(self):
         self.settings = {
             'schema': 'http',
-            'user': '',
-            'password': '',
+            'user': 'developer',
+            'password': 'd3v3l0p3r',
             'host': '127.0.0.1',
             'port': '80',
         }
@@ -71,8 +71,8 @@ class TestGetEditSave(BaseManagerTest):
         projects_count = len(all_objects)
         assert(isinstance(projects_count, int))
         first_project = all_objects[0]
-        self.old_description = first_project.description
-        first_project.description = 'My First Project'
+        self.old_description = first_project.get_data()['Description']
+        first_project.update_value('Description', 'My First Project')
         first_project.save()
         retrieved_project = self.manager.get(description='My First Project')
         # Make sure that we're updating when we save the changes to the first student, not creating a new row.
@@ -87,7 +87,6 @@ class TestTypeConversions(BaseManagerTest):
     def run_test(self):
         all_objects = self.manager.all()
         project_1 = all_objects[0]
-        print project_1._data
         self.assertIsInstance(project_1._data['Due Date'], datetime.date)
         self.assertIsInstance(project_1._data['Description'], six.string_types)
         self.assertIsInstance(project_1._data['Days Elapsed'], float)
@@ -113,7 +112,7 @@ class TestCreateNew(BaseManagerTest):
     def run_test(self):
         # TODO: Filter out unreasonable types for us to write to.
 
-        record = FileMakerRecord(data=NEW_PROJECT_DATA)
+        record = FileMakerRecord(data=NEW_PROJECT_DATA, manager=self.manager)
         # TODO: Test that Rec-id is set when we save the record.
         record.save()
         record2 = self.manager.get(Description=NEW_PROJECT_DATA['Description'])
@@ -125,7 +124,7 @@ class TestEdit(BaseManagerTest):
 
     def run_test(self):
         record = self.manager.all()[0]
-        initial_record_id = record.id
+        initial_record_id = record.record_id
         new_description = self.random_string()
         record._data['Description'] = new_description
         record.save()
@@ -142,12 +141,11 @@ class TestEditMissing(BaseManagerTest):
 
     def edit_missing(self):
         record = self.manager.all()[0]
-        # TODO: Lets not rely on this number not being used as an ID - lets generate high numbers and then see.
-        record.record_id = 33030303
+        record.record_id = 9999999999
         record.save()
 
     def run_test(self):
-        self.assertRaises(FMActionException, self.edit_missing)
+        self.assertRaises(exceptions.FMActionException, self.edit_missing)
 
 
 class TestDelete(BaseManagerTest):
@@ -159,7 +157,7 @@ class TestDelete(BaseManagerTest):
         self.manager.get(record_id=rec_id)
         self.assertIsNotNone(rec_id)
         record.delete()
-        self.assertRaises(FMActionException, self.manager.get, record_id=rec_id)
+        self.assertRaises(exceptions.FMActionException, self.manager.get, record_id=rec_id)
 
 
 class TestViewMethod(BaseManagerTest):

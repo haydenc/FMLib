@@ -107,22 +107,27 @@ class FileMakerMetadata(BaseResultSet):
         return converted_data
 
     def _convert(self, field_type, value, to_string=False):
+        if value is None:
+            return None
         direction = 'from' if to_string else 'to'
         try:
             field_type_name = self.field_type_shim.get(field_type, field_type)
             conversion_method = getattr(self, '_convert_%s_%s' % (direction, field_type_name))
-            return conversion_method(value)
         except AttributeError:
+            import pdb; pdb.set_trace()
             raise FMConversionException(
-                'Conversions for type "%s" not available.' +
-                'Extend the FileMakerMetadata class with a "_convert_from_{{type}}" method.' % field_type)
+                'Conversions for type "%s" not available.' % field_type +
+                'Extend the FileMakerMetadata class with a "_convert_from_%s" method.' % field_type)
+        return conversion_method(value)
 
-    def _convert_to_text(self, string_value):
-        # TODO: Check encoding - should we encode to UTF here?
+    @staticmethod
+    def _convert_to_text(string_value):
         return string_value
 
-    def _convert_from_text(self, text_value):
-        return text_value
+    @staticmethod
+    def _convert_from_text(text_value):
+        # If we're going to have encoding problems, lets have them now.
+        return unicode(text_value)
 
     def _convert_to_date(self, string_value):
         return datetime.strptime(string_value, self._get_date_format())
@@ -130,14 +135,17 @@ class FileMakerMetadata(BaseResultSet):
     def _convert_from_date(self, date_value):
         return date_value.strftime(self._get_date_format())
 
-    def _convert_from_timestamp(self, timestamp_value):
+    @staticmethod
+    def _convert_from_timestamp(timestamp_value):
         return timestamp_value
 
-    def _convert_to_timestamp(self, timestamp_value):
+    @staticmethod
+    def _convert_to_timestamp(timestamp_value):
         return timestamp_value
 
-    def _convert_to_number(self, string_value):
-        if string_value == None:
+    @staticmethod
+    def _convert_to_number(string_value):
+        if string_value is None:
             return None
         if not settings.number_conversion:
             return string_value
@@ -147,21 +155,23 @@ class FileMakerMetadata(BaseResultSet):
             try:
                 return float(string_value)
             except:
-                # TODO: Custom exceptions
-                raise Exception('Unable to parse value as a number')
+                raise FMConversionException('Unable to parse value as a number')
 
     @staticmethod
     def _convert_from_number(number_value):
         return str(number_value)
 
-    def _get_date_format(self):
+    @staticmethod
+    def _get_date_format():
         # TODO: This should come from the datasource node, but we have to convert format string flavours
         return '%m/%d/%Y'
 
-    def _get_time_format(self):
+    @staticmethod
+    def _get_time_format():
         # TODO: This should come from the datasource node, but we have to convert format string flavours
         return '%m/%d/%Y'
 
-    def _get_datetime_format(self):
+    @staticmethod
+    def _get_datetime_format():
         # TODO: This should come from the datasource node, but we have to convert format string flavours
         return '%m/%d/%Y'

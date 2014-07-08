@@ -2,11 +2,11 @@ class MultipleObjectsReturned(Exception):
     pass
 
 
-class ZeroObjectsReturned(Exception):
+class FMActionException(Exception):
     pass
 
 
-class FMActionException(Exception):
+class ZeroObjectsReturned(FMActionException):
     pass
 
 
